@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: coffee | mrluc/]]></title>
+  <link href="http://mrluc.github.com/blog/categories/coffee/atom.xml" rel="self"/>
+  <link href="http://mrluc.github.com/"/>
+  <updated>2012-07-30T01:59:22-05:00</updated>
+  <id>http://mrluc.github.com/</id>
+  <author>
+    <name><![CDATA[L.F.]]></name>
+    <email><![CDATA[superluc@gmail.com]]></email>
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[What Are Macros?]]></title>
+    <link href="http://mrluc.github.com/blog/2012/07/23/what-are-macros/"/>
+    <updated>2012-07-23T17:47:00-05:00</updated>
+    <id>http://mrluc.github.com/blog/2012/07/23/what-are-macros</id>
+    <content type="html"><![CDATA[<p>Someone must think Lisp's macros are a big deal. They're discussed frequently on Hacker News, they're probably one of the most-cited examples of 'what makes Lisp special', and copies of the definitive book on macros are currently selling for $177 -- <a href="http://www.amazon.com/gp/product/0130305529">used</a>. A book available for <a href="http://www.paulgraham.com/onlisptext.html">free</a> in PDF form.</p>
+
+<p>What's the big deal?</p>
+
+<p>Lots of good programmers don't use macros, and write code in productive, Smalltalk-styled languages like Ruby, where libraries and community are plentiful. More to the point, especially in Ruby, they use those libraries mostly via Domain-Specific Languages, marvels of clarity and concision that make moving mountains appear effortless. Life is good. Right?</p>
+
+<p>Hey, I love Ruby too. But I love her with a pang, and I am not alone.</p>
+
+<p>Those who have once supped the sweet sup of macros are never fully satisfied without them. We see them in every shovelful of functions and blocks we heave onto the scorching roadway, under the watchful gaze of the Parser With No Eyes.</p>
+
+<p>We pine. But with Ruby to hand, it's hard to pin down exactly what we're pining for.</p>
+
+<p>The answer crystallized for me recently, when I wrote a dead-simple implementation of Lisp-style <a href="http://github.com/mrluc/macros.coffee">macros for CoffeeScript</a>. I'd like to explain the difference I feel between macro-style and Ruby-style metaprogramming, and why I think macros are coming back even without Lisp.</p>
+
+<p>Macro meta is different. Here's a tease: how would you write code that can reliably turn the synchronous form into the asynchronous?</p>
+
+<p><code>coffeescript CoffeeScript with 'cc' macro
+if x = asyncGet docname, cc()
+  p x
+else
+  p "whoa"
+</code></p>
+
+<p>``` javascript Resulting Javascript
+asyncGet(docname, function(<em>thang) {
+  var x;
+  if (x = </em>thang) {</p>
+
+<pre><code>p(x);
+</code></pre>
+
+<p>  } else {</p>
+
+<pre><code>p("whoa");
+</code></pre>
+
+<p>  }
+}
+```</p>
+
+<p>There are at least two frameworks for doing this in Javascript ... with macros, all it takes is 20 lines.</p>
+
+<h2>What are 'Lisp-Style' Macros?</h2>
+
+<p>Most languages can be extended towards a problem. In Ruby, for example, people use <code>:symbols</code>, <code>hashes =&gt; 'and'</code> of course <code>{|blocks| …}</code> to make little languages (and by overriding method_missing enough, you can make it do nearly anything).</p>
+
+<p>Macros are different. Macros are like functions that change your code <em>before</em> it runs, tiny programs that can deeply modify your code's structure.</p>
+
+<p>To understand how they do this, you first should know a few things about compilers.</p>
+
+<p>The source code of a program starts out as a string that you and I can read, like</p>
+
+<p><code>coffeescript just a sequence of bytes ...
+2 + 2
+</code></p>
+
+<p>But to the computer, that's just <code>32 20 2B 20 32</code>. It then gets turned into individual tokens:</p>
+
+<p>``` coffeescript tokens produced by parsing CoffeeScript ...</p>
+
+<pre><code>[ ['NUMBER',2,0],  
+  ['+', '+',0],  
+  [NUMBER, 2,0],  
+  [TERMINATOR,,0] ]
+</code></pre>
+
+<p>```</p>
+
+<p>Still just a list of stuff the computer doesn't understand. Finally, it is transformed into a tree of nodes, e.g.:</p>
+
+<p>``` coffeescript Nodes of the Abstract Syntax Tree (AST) in CoffeeScript, vital attributes only, many methods and properties not shown
+{ expressions: [</p>
+
+<pre><code>operator: +,
+first: {
+  base: { value: 2}, 
+  properties: [ ]
+},
+second: {
+  base: { value: 2}, 
+  properties: [ ]
+},
+flip: false
+</code></pre>
+
+<p>  ]
+}
+```</p>
+
+<p>This is the AST, or Abstract Syntax Tree. The AST has enough detail, structure, and associated behavior to compile into a language the computer does understand. For example, CoffeeScript compiles (almost) seamlessly into Javascript.</p>
+
+<p>This tree of nodes models everything that happens in your source code; it's not just a meaningless sequence of letters or tokens. Lisp-style macros let you mess with that tree right before it is compiled.</p>
+
+<p><strong>This is why macros are powerful.</strong> If you want to write a legal expression in the language, and you want it to mean some other legal expression, with macros, it really will <em>become</em> that other expression, not just <em>act_like</em> it. You can extend the language with the same fearlessness that you extend objects.</p>
+
+<h2>How Macro Meta Differs (From, Say, Ruby)</h2>
+
+<p>The best programming (and the reason we reach for meta-programming) is because we understand a problem well enough to confidently say, "I want to write <em>this</em>, and I want it to do <em>that</em>," and then we see what tools the language has that can get us there.</p>
+
+<p><strong>Ruby meta-programming happens at <em>run-time</em>.</strong> We do whatever it takes (hooks on module inclusion, instance_exec, monkey-patch) to <em>create context</em> within classes or blocks, and use it to build up structures (Markaby), or declaratively assign behaviors ("acts-as" methods), or both (DataMapper).</p>
+
+<p><strong>Macros happen at <a href="http://dunsmor.com/lisp/onlisp/onlisp.html#SEC_Top" title="Of course, compile-time can be any time, in Lisp anyway">compile-time</a>.</strong> They actually <em>replace</em> <strong>x</strong> with <strong>y</strong> via the AST -- an esoteric operation with great trade-offs, and one that requires us to think in a way that may be new.</p>
+
+<p>What might that look like? Well, imagine that Ruby had a compilation phase:</p>
+
+<p><code>ruby imaginary lib/imaginary.rb with imaginary foo() macro
+obj = foo { acts_as... }
+</code>
+<code>ruby imaginary src/imaginary.rb output
+(obj = Foo.new).instance_exec{
+  def behavior; ... end
+}
+</code></p>
+
+<p>Holy cows, the macro call was compiled away! It will behave correctly, but we got the "meta" out of our system during compilation.</p>
+
+<p>Macros are not Ruby DSLs, though. They don't rely on a limited set of allowed methods for extending the language (<code>method_missing</code>, <code>instance_exec</code> et al) -- rather, they can use the entire language as they see fit, because they can expand into any valid code.</p>
+
+<h2>Difference, Illustrated: Control Flow</h2>
+
+<p>Macros good, run-time bad.</p>
+
+<p>Imagine that the <code>if then else</code> operators in Ruby were named <code>AscertainingThat</code>, <code>BeItResolved</code> and <code>Contrariwise.</code> Would rewriting <code>if</code> be a good fit, even if it saved all those keystrokes?:</p>
+
+<p>``` ruby
+def iif(cond, ok, notok)
+  AscertainingThat cond</p>
+
+<pre><code>ok.call()            # d'oh!
+</code></pre>
+
+<p>  Contrariwise</p>
+
+<pre><code>notok.call()         # d'oh!
+</code></pre>
+
+<p>  end
+end</p>
+
+<p>iif 2 > 1,
+  ->{</p>
+
+<pre><code>p "success!" 
+</code></pre>
+
+<p>  },
+  ->{</p>
+
+<pre><code>p "humbuggery!" 
+</code></pre>
+
+<p>  }
+```</p>
+
+<p>That would behave correctly. Problems?</p>
+
+<ul>
+<li><em>Performance.</em> We use 'if' <em>everywhere</em>. Run-time lambda calling is too 'heavy'.</li>
+<li><em>Evaluation.</em> It may not be obvious, but you can never add a short-circuiting <code>elsif</code> without incurring <em>two</em> lambda calls per <code>elsif</code>.</li>
+</ul>
+
+
+<p>Contrariwise, a macro version would work reliably, compiling down to the wordy, <code>IfItBeAscertainedThat…</code> version, with no run-time penalty.</p>
+
+<h2>Does It Matter For DSLs?</h2>
+
+<p>Okay, so macros can do <em>some</em> things that Ruby DSLs aren't suited for. Still, it's not as though Ruby is sorely lacking for control flow options, especially with the welcome addition of Fibers. In terms of day-to-day coding, one <em>rarely</em> develops new methods of control flow, whereas a DSL that presents an attractive interface for commonly used functionality <em>is</em> a frequent goal in Lisps and in Ruby.</p>
+
+<p>The conventional wisdom about macros is probably this:</p>
+
+<blockquote><p>"If you aren't writing control structures, DSL techniques in dynamic languages are as good as macros."</p></blockquote>
+
+<p>Are DSL techniques similar to macros?</p>
+
+<p>Yes, in that they let us write exactly what we want to write, most of the time. Idiomatic Ruby libraries are amazingly easy to use, and the resulting code, even easier to read. Taken as a whole, they are an unsurpassed marvel of library design.</p>
+
+<p><strong>But is the <em>production</em> of a DSL similar to the production of a macro?</strong></p>
+
+<p>This question is rarely asked, but I think it's crucial to explaining why Lispers and former Lispers, including current Rubyists, harbor such deep feelings for macros. The answer is: No.</p>
+
+<h2>DSL-first programming</h2>
+
+<p>A common phrase associated with Lisp macros is "bottom-up programming." But a fine way of conceptualizing the benefits for Rubyists would be to replace it with the phrase "DSL-first programming."</p>
+
+<p>It's a tantalizing phrase because we all know that starting by designing the DSL you wish existed is:</p>
+
+<ul>
+<li>a great way to gain insights into the nature of a new problem</li>
+<li>nonetheless, not something you do day-to-day.</li>
+</ul>
+
+
+<p>Sure, we all write DSLs … sometimes.</p>
+
+<p>Ask yourself: why aren't we writing them, like, all the freaking time?</p>
+
+<p>One answer is that we are, in fact. If we're under contract to do a run-of-the-mill Rails app without any extensive custom pieces, then all of your idiomatic code is in the Rails DSL, because the biggest win is to write code that meshes well with the existing Rails idioms. Rails is like a DSL you share with future maintainers.</p>
+
+<p>But when you open a new file yourself, when you <code>require 'sinatra'</code> and start hacking together something via some APIs, refactoring as necessary into functions, modules and classes, as you're getting a handle on the problem ...</p>
+
+<p>How often do you build a DSL with metaprogramming techniques when you're in that problem-focused mode?</p>
+
+<p>Rarely. Honestly, <em>it'd be a distraction, a break in your concentration,</em> even if only a minor one. (By DSL, I mean 'meta' techniques that create context, not just <code>yield</code>ing to a block). You're thinking about the problem, the APIs that you're calling and the task that needs to be accomplished, and the resulting models of the processes and data that are reflected in your code. But if you add the challenge of metaprogramming by modifying run-time state, well, it's no wonder that when we're in the throes of a problem we don't often reach for <code>instance_exec</code>.</p>
+
+<p>Building a DSL would be a distraction at the messiest and most productive part of the problem-solving process. I think that's often true, and that if it is, it's a weakness, because it's different when you've got macros.</p>
+
+<p>And this may be the most well-hidden benefit of macros. My theory is that the macro is easier to develop than a run-time-based DSL, for two reasons:</p>
+
+<ol>
+<li><p><em>Directness</em>. The macro is a tool that exists for exactly this purpose, and can generate any code that is legal in the language, whereas Ruby DSLs use a limited toolkit of runtime class and object modification techniques to provide desired behavior.</p>
+
+<p> The benefit of this directness? It makes DSL-style syntactic refactoring 'cheaper' mentally.</p>
+
+<p> With macros, you can refactor language at the same time as you refactor your functions. You can see that there's extra work being done in your code that a DSL could remove -- so you remove it, because you have an idea of what you want to say and you know what code it should generate, because you're typing it right now. It's very direct, and it doesn't feel like a detour.</p></li>
+<li><p><em>Transparency</em>. The DSL increases run-time complexity. This taxes your brain, your runtime, and your buglist. Compilation is a surprisingly transparent abstraction compared to noodling around in ObjectSpace.In addition, macros can be less 'magick-y' and more transparent.</p>
+
+<p> The 'magic' all happens at compile-time. Only a very few macros of this type will do anything complicated structurally. Most will in fact just be straight templates for a pattern in code. And you can visually inspect the compiled output and know that the abstraction isn't leaking, which compares well to noodling around in ObjectSpace.</p></li>
+</ol>
+
+
+<h2>Arguments Against Macros: Sound Familiar?</h2>
+
+<p>I don't offer these assertions as <strong>proof</strong> of macros' merits -- and I certainly don't hope to convince you that you should run out and write macros, that DSLs in Ruby are anything but great, etc. I just want to try to explain, in Ruby DSL terms, the weird attraction that Ruby macros have.</p>
+
+<p>Still, given what you may have heard about macros, those might seem like surprisingly positive assertions.</p>
+
+<p>Macros have a somewhat mixed reputation - exalted in hyperbolic style by their proponents, derided as unsustainable, unmaintainable, team-killing kludges by their opponents.</p>
+
+<p>But there's a reason Rubyists should suspect the complaints about macros.</p>
+
+<blockquote><p>"Use [meta/macros], and people who use your code aren't writing [Ruby/Lisp] any more. They're writing your language."</p>
+
+<p>"Stuff written with [meta/macros] doesn't follow the rules of the language. You just have to know the library and its expected behavior."</p>
+
+<p>"Anaphoric [meta/macro] techniques break encapsulation. They just pop names into scope. Where did they come from? You just have to <em>know</em>."</p></blockquote>
+
+<p>Ruby is, itself, a language and community guilty of the supposed sins of macros.</p>
+
+<p>To take just one of the most common, and basic, differences of opinion: Ruby's <code>require</code> breaks encapsulation. (I've heard that one a lot, and I have to say that I can't disagree strongly enough with anyone who would propose we start doing the CommonJS thing and have to say <code>things = require('thing'); things.thing_i_want …</code> in order to pull a single name into scope).</p>
+
+<p>So, as a Rubyist, I have to consider the arguments against macros with a grain of salt. Lots of programmers have different views than I do about how restrictive/'safe' a programming language should be.</p>
+
+<p>Ruby is generally acknowledged to be a pretty permissive language, and so it's fitting if arguments against macros leave a Rubyist unmoved.</p>
+
+<h2>So, they're direct(DSL->expansion), don't increase run-time complexity, and you can read the expansions.</h2>
+
+<p>Aaaaaand they're nonexistant in Ruby.</p>
+
+<p>Well, that's not quite true. There's the admirable <em>RubyMacros</em> project, which is a couple of years old and uses RedParse -- but works, and has an appropriately terse syntax reminiscent of MetaLua's quasiquote.</p>
+
+<p>And let's not forget Rubinius.</p>
+
+<p>Rubinius already codifies and supports the kind of AST transformations that Lisp-style macros rely on. All that's missing is a single, ambitious hack that would go beyond one-off transforms, and add support for writing such transforms.</p>
+
+<hr />
+]]></content>
+  </entry>
+  
+</feed>
