@@ -4,7 +4,7 @@
   <title><![CDATA[Category: coffee | mrluc/]]></title>
   <link href="http://mrluc.github.com/blog/categories/coffee/atom.xml" rel="self"/>
   <link href="http://mrluc.github.com/"/>
-  <updated>2012-07-30T01:59:22-05:00</updated>
+  <updated>2012-07-30T19:28:26-05:00</updated>
   <id>http://mrluc.github.com/</id>
   <author>
     <name><![CDATA[L.F.]]></name>
@@ -271,6 +271,10 @@ end</p>
 <p>And let's not forget Rubinius.</p>
 
 <p>Rubinius already codifies and supports the kind of AST transformations that Lisp-style macros rely on. All that's missing is a single, ambitious hack that would go beyond one-off transforms, and add support for writing such transforms.</p>
+
+<p>The question of macros would look like in Ruby -- what would a 'typical project' look like if the community adopted them? -- is one that I can't answer. They seem an odd fit for Ruby, a compile-time abstraction in a message-passing world. That's why I'm more immediately interested in writing them for CoffeeScript, and even more interested in using someone else' implementation if it's production-ready.</p>
+
+<p>But macros have been adopted into a number of freewheeling languages besides Lisp. Like Factor, for instance. And Julia. And Metalua. Those languages have their own strong idioms for metaprogramming, their own characteristic look and feel. Macros may not have been ese</p>
 
 <hr />
 ]]></content>
